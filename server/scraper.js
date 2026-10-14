@@ -191,6 +191,72 @@ export function billToPlan(billText) {
   return mbps ? `${mbps} MBPS` : `UNKNOWN (BILL ${amount})`;
 }
 
+// Switch the portal's status filter (default "Active") to "All"
+// Switch the portal's status filter (default "Active") to "All"
+async function setStatusAll(page, prevTotal) {
+  let acted = false;
+
+  const selects = page.locator('select:not([name$="_length"]):not([id$="_length"])');
+  const count = await selects.count();
+  for (let i = 0; i < count; i++) {
+    const sel = selects.nth(i);
+    const options = await sel.locator('option').evaluateAll((opts) =>
+      opts.map((o) => o.textContent.trim())
+    );
+    console.log(`Dropdown ${i + 1} options: ${options.join(' | ')}`);
+
+    // The status dropdown is the one that has an "Active" style option
+    const isStatus = options.some((t) => /active|inactive|disconnect|suspend/i.test(t));
+    if (!isStatus || acted) continue;
+
+    const allLabel = options.find((t) => /^(all|all status(es)?|any)\b/i.test(t));
+    if (allLabel) {
+      await sel.selectOption({ label: allLabel }, { force: true });
+      console.log(`Status dropdown: selected "${allLabel}".`);
+      acted = true;
+    } else {
+      console.log('Status dropdown found but it has no "All" option.');
+    }
+  }
+
+  // Fallback: an "All" tab or button
+  if (!acted) {
+    for (const role of ['tab', 'button']) {
+      const el = page.getByRole(role, { name: /^all$/i }).first();
+      if (await el.count()) {
+        await el.click();
+        console.log(`Clicked the "All" ${role}.`);
+        acted = true;
+        break;
+      }
+    }
+  }
+
+  if (!acted) {
+    console.log('Could not set the status filter to All. Using the table as shown.');
+    return;
+  }
+
+  // Some portals need a Search / Filter / Apply click after changing the filter
+  const apply = page.getByRole('button', { name: /^(search|filter|apply|submit)$/i }).first();
+  if (await apply.count()) {
+    await apply.click();
+    console.log('Clicked the filter button.');
+  }
+
+  // Wait for the table to reload with the new total
+  const start = Date.now();
+  while (Date.now() - start < 20000) {
+    const info = await readInfo(page);
+    if (info && info.total !== prevTotal) {
+      console.log(`Total changed: ${prevTotal} -> ${info.total}`);
+      return;
+    }
+    await page.waitForTimeout(500);
+  }
+  console.log('Total did not change after selecting All.');
+}
+
 // ---------- sync ----------
 
 async function scrapeAll() {
@@ -212,7 +278,9 @@ async function scrapeAll() {
           'See server/debug-no-info.png and send me the text shown under the table.'
       );
     }
-    const total = first.total;
+    await setStatusAll(page, first.total);
+    const afterFilter = await waitForPage(page, { from: 1 });
+    const total = (afterFilter || first).total;
     console.log(`Portal reports ${total} entries. Setting the largest page size...`);
     await showMaxRows(page, total);
 
