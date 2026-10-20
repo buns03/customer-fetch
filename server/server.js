@@ -1,3 +1,5 @@
+process.env.PLAYWRIGHT_BROWSERS_PATH = "0";
+
 import express from 'express';
 import cors from 'cors';
 import { sync, status, inspect, shutdown } from './scraper.js';
