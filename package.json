@@ -1,12 +1,8 @@
 {
-  "name": "customer-fetcher",
-  "private": true,
-  "scripts": {
-    "setup": "npm --prefix server install && npm --prefix client install",
-    "dev": "concurrently -n server,client -c green,cyan \"npm --prefix server start\" \"npm --prefix client run dev\"",
-    "build": "npm --prefix server install && npm --prefix client install && npm --prefix client run build"
-  },
-  "devDependencies": {
-    "concurrently": "^9.0.1"
+  "dependencies": {
+    "@sparticuz/chromium": "^131.0.0",
+    "playwright-core": "^1.49.0",
+    "cors": "^2.8.5",
+    "express": "^4.19.2"
   }
 }
