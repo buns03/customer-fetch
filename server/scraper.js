@@ -32,7 +32,14 @@ async function launchBrowser() {
 
 async function getContext() {
   if (!browser) browser = await launchBrowser();
-  if (!context) context = await browser.newContext();
+  if (!context) {
+    context = await browser.newContext();
+    // Skip images, fonts and media: the scraper only needs the table text
+    await context.route('**/*', (route) => {
+      const type = route.request().resourceType();
+      return ['image', 'font', 'media'].includes(type) ? route.abort() : route.continue();
+    });
+  }
   return context;
 }
 
@@ -181,12 +188,11 @@ async function showMaxRows(page, total) {
   const values = await select.locator('option').evaluateAll((opts) =>
     opts.map((o) => o.value)
   );
-  // Prefer "All" (-1), otherwise the largest number
-  const target = values.includes('-1')
-    ? '-1'
-    : values.map(Number).filter((n) => !Number.isNaN(n)).sort((a, b) => b - a)[0];
+  // Use a moderate page size (100 at most) to keep memory low on small servers
+  const nums = values.map(Number).filter((n) => !Number.isNaN(n) && n > 0 && n <= 100);
+  const target = nums.sort((a, b) => b - a)[0];
   if (target === undefined) return;
-  const expected = String(target) === '-1' ? total : Math.min(Number(target), total);
+  const expected = Math.min(target, total);
   await select.selectOption(String(target));
   const info = await waitForPage(page, { from: 1, minTo: expected });
   if (!info) console.log('Page size change did not finish in time; continuing with the current size.');
