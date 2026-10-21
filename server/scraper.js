@@ -1,4 +1,5 @@
-import { chromium } from 'playwright';
+import { chromium } from 'playwright-core';
+import sparticuz from '@sparticuz/chromium';
 import config from './config.js';
 import { tokenize } from './matcher.js';
 
@@ -9,8 +10,21 @@ let syncing = null;
 
 // ---------- browser / login ----------
 
+async function launchBrowser() {
+  // On Render (RENDER is set automatically) use the bundled server browser
+  if (process.env.RENDER || process.env.VERCEL) {
+    return chromium.launch({
+      args: sparticuz.args,
+      executablePath: await sparticuz.executablePath(),
+      headless: true,
+    });
+  }
+  // On your own PC, launch the normal local browser
+  return chromium.launch({ headless: config.headless });
+}
+
 async function getContext() {
-  if (!browser) browser = await chromium.launch({ headless: config.headless });
+  if (!browser) browser = await launchBrowser();
   if (!context) context = await browser.newContext();
   return context;
 }

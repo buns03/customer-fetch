@@ -27,8 +27,10 @@ function download(blob, filename) {
 
 const stamp = () => new Date().toISOString().slice(0, 10);
 
+const BASE = import.meta.env.VITE_API_URL ?? '';
+
 async function api(path, options) {
-  const res = await fetch(path, options);
+  const res = await fetch(`${BASE}${path}`, options);
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(data.error || `Request failed (${res.status})`);
   return data;
