@@ -11,15 +11,22 @@ let syncing = null;
 // ---------- browser / login ----------
 
 async function launchBrowser() {
-  // On Render (RENDER is set automatically) use the bundled server browser
-  if (process.env.RENDER || process.env.VERCEL) {
+  // Vercel/Lambda style hosts: bundled server browser
+  if (process.env.VERCEL) {
     return chromium.launch({
       args: sparticuz.args,
       executablePath: await sparticuz.executablePath(),
       headless: true,
     });
   }
-  // On your own PC, launch the normal local browser
+  // Render (Docker): normal Chromium installed by the Dockerfile
+  if (process.env.RENDER) {
+    return chromium.launch({
+      headless: true,
+      args: ['--no-sandbox', '--disable-dev-shm-usage', '--disable-gpu'],
+    });
+  }
+  // Your own PC
   return chromium.launch({ headless: config.headless });
 }
 
