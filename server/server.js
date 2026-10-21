@@ -50,9 +50,9 @@ app.post('/api/search', wrap(async (req, res) => {
 }));
 
 // Local server fallback
-if (process.env.NODE_ENV !== 'production' && !process.env.VERCEL) {
+if (!process.env.VERCEL) {
   const port = process.env.PORT || 3001;
-  app.listen(port, () => console.log(`API ready on http://localhost:${port}`));
+  app.listen(port, '0.0.0.0', () => console.log(`API ready on port ${port}`));
 }
 
 process.on('SIGINT', async () => { await shutdown(); process.exit(0); });
